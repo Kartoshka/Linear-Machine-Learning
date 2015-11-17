@@ -20,7 +20,7 @@ public class LinearRegressionClassifier implements Serializable {
 	
 	
 	private int repetitions =3;
-	private double learnRate = 0.5;
+	private double learnRate = 1;
 	private double initial_value =0.5;
 
 	public LinearRegressionClassifier(int dimension, String[] classes) {
@@ -93,13 +93,19 @@ public class LinearRegressionClassifier implements Serializable {
 						// - yi
 						if(labels[t].equals(classes[label]))
 							gradient -=1.0d;
+                                                if(t%1000 == 0)
+                                                    System.out.println("sum and multiplication for  "+(r+1)+" is "+gradient);
 						//*xj
 						gradient *= data[t][r];
 						//*-learnRate
 						gradient *=learnRate;
+                                                if(t%1000 == 0)
+                                                    System.out.println("gradient for  "+(r+1)+" is "+gradient);
 						gradient /= data.length;
 						tempTheta -= gradient;
 						theta.set(r, label, tempTheta);
+                                                if(t%1000 == 0)
+                                                    System.out.println("Theta "+(r+1)+" is "+tempTheta);
 					}
 				}
 			}
