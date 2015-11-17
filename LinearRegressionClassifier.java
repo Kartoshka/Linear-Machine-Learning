@@ -17,11 +17,36 @@ public class LinearRegressionClassifier implements Serializable {
 	private int dimension;
 	private String[] classes;
 	private Matrix theta; // The Matrix we want to build which contains the unknowns
+	
+	
+	private int repetitions =3;
+	private double learnRate = 0.5;
+	private double initial_value =0.5;
 
 	public LinearRegressionClassifier(int dimension, String[] classes) {
 		this.dimension = dimension;
 		this.classes = classes;
 		theta = new Matrix(dimension, classes.length); // Create an empty matrix
+		fillMatrix(initial_value);
+	}
+	
+	public LinearRegressionClassifier(int dimension, String[] classes, double learning_rate, int numRepetitions) {
+		this(dimension, classes);
+		repetitions = numRepetitions;
+		learnRate = learning_rate;
+	}
+	
+	//fills matrix with the same value (initial value before starting to do gradient descent)
+	private void fillMatrix(double i)
+	{
+		for(int r =0; r<dimension; r++)
+		{
+			for(int c =0; c<classes.length;c++)
+			{
+				theta.set(r, c, i);
+			}
+		}
+		
 	}
 
 	public String classify(double[] data) {
@@ -42,49 +67,43 @@ public class LinearRegressionClassifier implements Serializable {
 	}
 
 	public void train(double[][] data, String[] labels) throws FileNotFoundException, UnsupportedEncodingException {
-		//Musts: data.length == labels.length. All data[i] == dimension. All labels must appear at least once.
-		//labels means classes
 		
-		//Matrices used for calculations (equation of the form Ax = B, where A,B are matrices. the X is the matrix containing the thetas in this case)
-		Matrix A = new Matrix(dimension, dimension); //Contains all the coefficients of the thetas after calculating the gradients
-		Matrix B = new Matrix(dimension, 1); //Contains all constants (constants only occur when on label in the training set corresponds with the class for which the thetas are being calculated)
-		
-		//Here's the fun part! Calculating the gradients and finding the thetas for all classes!
-		for(int i = 0; i < classes.length; i++) {
-			for(int j = 0; j < dimension; j++) { //j represents the current row in the matrix
-				for(int k = 0; k < dimension; k++) { //k represents the current column in the matrix
-					
-					double tempA = 0;
-					double tempB = 0;
-					
-					for(int l = 0; l < data.length; l++) {
-						
-						tempA += data[l][j] * data[l][k];
-						
-						if(k == 0 && labels[l].equals(classes[i])) //Only need to calculate labels once per row
-							tempB += data[l][j];
-					}
-					
-					tempA  *= 2;
-					A.set(j, k, tempA);
-					
-					if(k == 0) { //Again, only calculate labels once per row (one constant per equation)
-						tempB *= 2;
-						B.set(j, 0, tempB);
+		int trainSize = data.length;
+		double gradient =0;
+		double tempTheta=0;
+		//For every class
+		for(int label =0; label<classes.length; label++)
+		{
+			//We repeat the stochastic gradient descent multiple times
+			for(int i =0; i<repetitions; i++)
+			{
+				for(int t =0; t<trainSize;t++){
+					//For every unknown/theta 
+					for(int r=0; r<dimension; r++)
+					{						
+						//For every theta we want to do the following thetaj = thethaj - (theta1*x1+theta2*x2+...+thetan*xn -label)xj
+						//We use the xs and label of the training data we're currently using 
+						gradient = 0;
+						tempTheta = theta.get(r, label);
+						for(int r2=0; r2<dimension;r2++)
+						{
+							//thetai*xi added up
+							gradient += data[t][r2]*theta.get(r2, label);
+						}
+						// - yi
+						if(labels[t].equals(classes[label]))
+							gradient -=1.0d;
+						//*xj
+						gradient *= data[t][r];
+						//*-learnRate
+						gradient *=learnRate;
+						gradient /= data.length;
+						tempTheta -= gradient;
+						theta.set(r, label, tempTheta);
 					}
 				}
-				System.out.println("Class: " + i + ". Position: " + j);
 			}
-			
-			//System.out.println(Arrays.deepToString(A.getArray()));
-			PrintWriter writer = new PrintWriter("class"+i+".txt", "UTF-8");
-			writer.println(Arrays.deepToString(A.getArray()));
-			writer.close();
-			
-			Matrix x = A.solve(B);
-			theta.setMatrix(0, dimension - 1, i, i, x);
 		}
-		
 	}
 
 	public Map<String, Double> classDistribution(double[] data) {
